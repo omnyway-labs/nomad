@@ -86,7 +86,7 @@
   (let [existing-migrations (set (load-migrations migrator))]
     (doseq [{:as clause :keys [tag up]} (-> @migrations :clauses)]
       (when-not (contains? existing-migrations tag)
-        (log/infof "Migrating %s" tag)
+        (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
 
 (defn migrate!
@@ -95,4 +95,5 @@
   [migrator]
   (init migrator)
   (apply-migrations! migrator)
-  (fini migrator))
+  (fini migrator)
+  :ok)
