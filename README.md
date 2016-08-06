@@ -41,3 +41,7 @@ Create a `migrator` using one of the supported nomad migrators (currently H2 and
 16-08-06 19:11:19 luna INFO [nomad.core:89] - Applying migration init-schema
 16-08-06 19:11:19 luna INFO [nomad.core:89] - Applying migration add-test1-age
 ```
+
+## References
+
+See [nomad-migrators](https://github.com/omnypay/nomad-migrators/tree/master/src/nomad/migrator) for examples of how to create migrators for different databases.
