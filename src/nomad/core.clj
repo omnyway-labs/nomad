@@ -40,13 +40,12 @@
    (register-migration! tag up-fn (constantly nil)))
   ([tag up-fn down-fn]
    (let [clause {:tag tag :up up-fn :down down-fn}]
-     (if (contains? (:index @migrations) tag)
-       (throw
-        (ex-info (str "migration exists for tag " (pr-str tag)) {:tag tag}))
-       (swap! migrations
-              #(-> %
-                   (update-in [:index] conj tag)
-                   (update-in [:clauses] conj clause))))
+     (when (contains? (:index @migrations) tag)
+       (log/warnf "Redefining migration handler for tag %s" (pr-str tag)))
+     (swap! migrations
+            #(-> %
+                 (update-in [:index] conj tag)
+                 (update-in [:clauses] conj clause)))
      :ok)))
 
 (defn clear-migrations! []
