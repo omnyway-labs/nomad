@@ -1,4 +1,4 @@
-(defproject net.omnypay/nomad "0.0.1"
+(defproject net.omnypay/nomad "0.0.2"
   :encoding "utf-8"
   :description "Nomad is the OmnyPay schema migration library"
   :dependencies [[com.taoensso/timbre "4.3.1"]
