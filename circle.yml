@@ -1,0 +1,37 @@
+machine:
+  java:
+    version: oraclejdk8
+  pre:
+    - git config --global user.name "CircleCI"
+    - git config --global user.email "circleci@omnypay.net"
+    - git config --global push.default simple
+  post:
+    - go get github.com/omnypay/github-release
+
+  environment:
+    VERSION_FILE: $HOME/VERSION
+    SERVICE_NAME: nomad
+    ASSET_BUCKET: omnypay-app-assets-us-west-2
+  services:
+    - docker
+
+dependencies:
+  pre:
+    - sudo pip install --upgrade awscli
+    - git clone https://${READ_BOT_TOKEN}@github.com/omnypay/omnypay-ci.git  ~/omnypay-ci --depth 1 --quiet
+    - mkdir -p ~/.lein; cp ~/omnypay-ci/lein/profiles.clj ~/.lein
+
+test:
+  override:
+    - lein test
+
+deployment:
+  assets:
+    branch: master
+    commands:
+      - ~/omnypay-ci/semver-from-git-commits $VERSION_FILE
+      - export SEMVER=$(cat $VERSION_FILE); make dist
+
+      # Push asset to S3
+      - export SEMVER=$(cat $VERSION_FILE); aws s3 cp ${SERVICE_NAME}-v${SEMVER}.tar s3://${ASSET_BUCKET}/${SERVICE_NAME}-v${SEMVER}.tar
+      - export SEMVER=$(cat $VERSION_FILE); aws s3 cp ${SERVICE_NAME}-v${SEMVER}.tar s3://${ASSET_BUCKET}/${SERVICE_NAME}-latest.tar --metadata version=$SEMVER
