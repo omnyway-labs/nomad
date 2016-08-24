@@ -1,4 +1,6 @@
-(defproject net.omnypay/nomad "0.0.2"
+(def VERSION (or (not-empty (System/getenv "SEMVER")) "0.0.1-SNAPSHOT"))
+
+(defproject net.omnypay/nomad VERSION
   :encoding "utf-8"
   :description "Nomad is the OmnyPay schema migration library"
   :dependencies [[com.taoensso/timbre "4.3.1"]
