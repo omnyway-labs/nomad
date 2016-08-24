@@ -29,5 +29,7 @@ deployment:
   assets:
     branch: master
     commands:
-      - ~/omnypay-ci/semver-from-git-commits $VERSION_FILE
-      - export SEMVER=`cat $VERSION_FILE`; lein with-profile uberjar deploy
+      - ~/omnypay-ci/semver-monotonic $VERSION_FILE
+      # Push to Github release
+      - export SEMVER=$(cat $VERSION_FILE); github-release release --user $CIRCLE_PROJECT_USERNAME --repo $CIRCLE_PROJECT_REPONAME --tag v$SEMVER  --target $CIRCLE_SHA1
+      - export SEMVER=$(cat $VERSION_FILE); lein deploy prod
