@@ -30,8 +30,4 @@ deployment:
     branch: master
     commands:
       - ~/omnypay-ci/semver-from-git-commits $VERSION_FILE
-      - export SEMVER=$(cat $VERSION_FILE); make dist
-
-      # Push asset to S3
-      - export SEMVER=$(cat $VERSION_FILE); aws s3 cp ${SERVICE_NAME}-v${SEMVER}.tar s3://${ASSET_BUCKET}/${SERVICE_NAME}-v${SEMVER}.tar
-      - export SEMVER=$(cat $VERSION_FILE); aws s3 cp ${SERVICE_NAME}-v${SEMVER}.tar s3://${ASSET_BUCKET}/${SERVICE_NAME}-latest.tar --metadata version=$SEMVER
+      - export SEMVER=`cat $VERSION_FILE`; lein with-profile uberjar deploy
