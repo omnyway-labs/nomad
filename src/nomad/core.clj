@@ -33,6 +33,12 @@
 
 (defonce migrations (atom {:index #{} :clauses []}))
 
+(defn remove-and-conj [pred-fn c v]
+  (into (empty c)
+        (conj (remove pred-fn c) v)))
+
+(defn filter-by-tag [tag x] (= tag (:tag x)))
+
 (defn register-migration!
   ([tag]
    (register-migration! tag (constantly nil)))
@@ -40,12 +46,17 @@
    (register-migration! tag up-fn (constantly nil)))
   ([tag up-fn down-fn]
    (let [clause {:tag tag :up up-fn :down down-fn}]
-     (when (contains? (:index @migrations) tag)
-       (log/warnf "Redefining migration handler for tag %s" (pr-str tag)))
      (swap! migrations
             #(-> %
-                 (update-in [:index] conj tag)
-                 (update-in [:clauses] conj clause)))
+                 (update-in [:clauses]
+                            (if (contains? (:index @migrations) tag)
+                              (do
+                                (log/warnf "Redefining migration handler for tag %s"
+                                           (pr-str tag))
+                                (partial remove-and-conj (partial filter-by-tag tag)))
+                              conj)
+                            clause)
+                 (update-in [:index] conj tag)))
      :ok)))
 
 (defn clear-migrations! []

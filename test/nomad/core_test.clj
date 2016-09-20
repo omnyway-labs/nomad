@@ -14,4 +14,22 @@
          (nomad/register-migration! "add-test1-age"
                                     (fn []
                                       (println
-                                       "ALTER TABLE test1 ADD COLUMN age INTEGER"))))))
+                                       "ALTER TABLE test1 ADD COLUMN age INTEGER")))))
+
+  (is (= [2 2]
+         [(count (-> @nomad/migrations :clauses))
+          (count (-> @nomad/migrations :index))]))
+
+  (is (= :ok 
+         (nomad/register-migration! "add-test1-age"
+                                    (fn []
+                                      (println
+                                       "ALTER TABLE test1 ADD COLUMN age INTEGER")))))
+
+  (is (= [2 2]
+         [(count (-> @nomad/migrations :clauses))
+          (count (-> @nomad/migrations :index))]))
+
+  (is (= ["add-test1-age" "init-schema"]
+         (->> @nomad/migrations :clauses (map :tag)))))
+
