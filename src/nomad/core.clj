@@ -39,25 +39,20 @@
 
 (defn filter-by-tag [tag x] (= tag (:tag x)))
 
-(defn register-migration!
-  ([tag]
-   (register-migration! tag (constantly nil)))
-  ([tag up-fn]
-   (register-migration! tag up-fn (constantly nil)))
-  ([tag up-fn down-fn]
-   (let [clause {:tag tag :up up-fn :down down-fn}]
-     (swap! migrations
-            #(-> %
-                 (update-in [:clauses]
-                            (if (contains? (:index @migrations) tag)
-                              (do
-                                (log/warnf "Redefining migration handler for tag %s"
-                                           (pr-str tag))
-                                (partial remove-and-conj (partial filter-by-tag tag)))
-                              conj)
-                            clause)
-                 (update-in [:index] conj tag)))
-     :ok)))
+(defn register-migration! [tag specs]
+  (let [clause (assoc specs :tag tag)]
+    (swap! migrations
+           #(-> %
+                (update-in [:clauses]
+                           (if (contains? (:index @migrations) tag)
+                             (do
+                               (log/warnf "Redefining migration handler for tag %s"
+                                          (pr-str tag))
+                               (partial remove-and-conj (partial filter-by-tag tag)))
+                             conj)
+                           clause)
+                (update-in [:index] conj tag)))
+    :ok))
 
 (defn clear-migrations! []
   (reset! migrations {:index #{} :clauses []}))
@@ -74,8 +69,8 @@
       :down (fn []
               (jdbc/do-commands
                \"DROP TABLE test1\")))"
-  [tag & {:keys [up down]}]
-  `(register-migration! (name '~tag) ~up ~down))
+  [tag & specs]
+  `(register-migration! (name '~tag) specs))
 
 (defn init [migrator]
   (-init migrator))
