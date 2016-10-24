@@ -24,7 +24,8 @@
     nomad.core
   (:require
    [taoensso.timbre :as log]
-   [flatland.ordered.set :refer [ordered-set]]))
+   [loom.graph :as graph]
+   [loom.alg :as graph-alg]))
 
 (defprotocol IMigrator
   (-init [this])
@@ -90,9 +91,23 @@
 (defn apply! [migrator tag migration-fn]
   (-apply! migrator tag migration-fn))
 
+(defn sort-tags [clauses]
+  (->> (for [{:keys [tag dependencies]} clauses]
+         (if (empty? dependencies)
+           [[tag :none]]
+           (for [dependency dependencies]
+             [tag dependency])))
+       (mapcat identity)
+       (apply graph/digraph)
+       graph-alg/topsort
+       (filter #(not= % :none))
+       reverse))
+
 (defn pending-migrations []
-  ;; fixme: reorder the migrations based on dependencies graph
-  (ordered-set (-> @migrations :clauses)))
+  (let [ordered-migration-tags (sort-tags (:clauses @migrations))]
+    (map (fn [tag]
+           (first (filter #(= (:tag %) tag) (:clauses @migrations))))
+         ordered-migration-tags)))
 
 (defn apply-migrations! [migrator]
   (let [existing-migrations (set (load-applied-migrations migrator))]
