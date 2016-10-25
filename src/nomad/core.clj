@@ -24,8 +24,7 @@
     nomad.core
   (:require
    [taoensso.timbre :as log]
-   [loom.graph :as graph]
-   [loom.alg :as graph-alg]))
+   [com.stuartsierra.dependency :as dep]))
 
 (defprotocol IMigrator
   (-init [this])
@@ -92,16 +91,17 @@
   (-apply! migrator tag migration-fn))
 
 (defn sort-tags [clauses]
-  (->> (for [{:keys [tag dependencies]} clauses]
-         (if (empty? dependencies)
-           [[tag :none]]
-           (for [dependency dependencies]
-             [tag dependency])))
-       (mapcat identity)
-       (apply graph/digraph)
-       graph-alg/topsort
-       (filter #(not= % :none))
-       reverse))
+  (let [dependencies (->> (for [{:keys [tag dependencies]} clauses]
+                            (if (empty? dependencies)
+                              [[tag :none]]
+                              (for [dependency dependencies]
+                                [tag dependency])))
+                          (mapcat identity))]
+    (->> (reduce (fn [graph dependency]
+                   (apply dep/depend graph dependency))
+                 (dep/graph) dependencies)
+         dep/topo-sort
+         (filter #(not= % :none)))))
 
 (defn pending-migrations []
   (let [ordered-migration-tags (sort-tags (:clauses @migrations))]
