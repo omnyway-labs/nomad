@@ -13,6 +13,7 @@
     (require '[nomad.core :as nomad :refer [defmigration]])
 
     (defmigration initial-schema
+      :dependencies [other-migration some-other-migration]
       :up   (fn []
               ;; perform db specific schema ops
               )
@@ -22,7 +23,8 @@
 "}
     nomad.core
   (:require
-   [taoensso.timbre :as log]))
+   [taoensso.timbre :as log]
+   [com.stuartsierra.dependency :as dep]))
 
 (defprotocol IMigrator
   (-init [this])
@@ -39,25 +41,20 @@
 
 (defn filter-by-tag [tag x] (= tag (:tag x)))
 
-(defn register-migration!
-  ([tag]
-   (register-migration! tag (constantly nil)))
-  ([tag up-fn]
-   (register-migration! tag up-fn (constantly nil)))
-  ([tag up-fn down-fn]
-   (let [clause {:tag tag :up up-fn :down down-fn}]
-     (swap! migrations
-            #(-> %
-                 (update-in [:clauses]
-                            (if (contains? (:index @migrations) tag)
-                              (do
-                                (log/warnf "Redefining migration handler for tag %s"
-                                           (pr-str tag))
-                                (partial remove-and-conj (partial filter-by-tag tag)))
-                              conj)
-                            clause)
-                 (update-in [:index] conj tag)))
-     :ok)))
+(defn register-migration! [tag specs]
+  (let [clause (assoc specs :tag tag)]
+    (swap! migrations
+           #(-> %
+                (update-in [:clauses]
+                           (if (contains? (:index @migrations) tag)
+                             (do
+                               (log/warnf "Redefining migration handler for tag %s"
+                                          (pr-str tag))
+                               (partial remove-and-conj (partial filter-by-tag tag)))
+                             conj)
+                           clause)
+                (update-in [:index] conj tag)))
+    :ok))
 
 (defn clear-migrations! []
   (reset! migrations {:index #{} :clauses []}))
@@ -68,14 +65,15 @@
   migrating forward and `:down` for rolling back, e.g.,
 
     (defmigration init-schema
-      :up   (fn []
-              (jdbc/do-commands
-               \"CREATE TABLE test1(name VARCHAR(32))\"))
-      :down (fn []
-              (jdbc/do-commands
-               \"DROP TABLE test1\")))"
-  [tag & {:keys [up down]}]
-  `(register-migration! (name '~tag) ~up ~down))
+      :dependencies [other-migration some-other-migration]
+      :up           (fn []
+                      (jdbc/do-commands
+                       \"CREATE TABLE test1(name VARCHAR(32))\"))
+      :down         (fn []
+                      (jdbc/do-commands
+                       \"DROP TABLE test1\")))"
+  [tag & specs]
+  `(register-migration! (name '~tag) specs))
 
 (defn init [migrator]
   (-init migrator))
@@ -83,7 +81,7 @@
 (defn fini [migrator]
   (-fini migrator))
 
-(defn load-migrations [migrator]
+(defn load-applied-migrations [migrator]
   (-load-migrations migrator))
 
 (defn applied? [migrator tag]
@@ -92,9 +90,28 @@
 (defn apply! [migrator tag migration-fn]
   (-apply! migrator tag migration-fn))
 
+(defn sort-tags [clauses]
+  (let [dependencies (->> (for [{:keys [tag dependencies]} clauses]
+                            (if (empty? dependencies)
+                              [[tag :none]]
+                              (for [dependency dependencies]
+                                [tag dependency])))
+                          (mapcat identity))]
+    (->> (reduce (fn [graph dependency]
+                   (apply dep/depend graph dependency))
+                 (dep/graph) dependencies)
+         dep/topo-sort
+         (filter #(not= % :none)))))
+
+(defn pending-migrations []
+  (let [ordered-migration-tags (sort-tags (:clauses @migrations))]
+    (map (fn [tag]
+           (first (filter #(= (:tag %) tag) (:clauses @migrations))))
+         ordered-migration-tags)))
+
 (defn apply-migrations! [migrator]
-  (let [existing-migrations (set (load-migrations migrator))]
-    (doseq [{:as clause :keys [tag up]} (-> @migrations :clauses)]
+  (let [existing-migrations (set (load-applied-migrations migrator))]
+    (doseq [{:as clause :keys [tag up]} (pending-migrations)]
       (when-not (contains? existing-migrations tag)
         (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
