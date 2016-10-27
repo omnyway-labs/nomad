@@ -73,7 +73,7 @@
                       (jdbc/do-commands
                        \"DROP TABLE test1\")))"
   [tag & specs]
-  `(register-migration! (name '~tag) specs))
+  `(register-migration! (name '~tag) ~specs))
 
 (defn init [migrator]
   (-init migrator))
