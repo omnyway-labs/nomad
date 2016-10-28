@@ -41,8 +41,17 @@
 
 (defn filter-by-tag [tag x] (= tag (:tag x)))
 
+(defn as-keyword [v]
+  (if (keyword? v) v (keyword (name v))))
+
+(defn normalize-dependency-names [clause]
+  (if (contains? clause :dependencies)
+    (update clause :dependencies (fn [d] (vec (map as-keyword d))))
+    clause))
+
 (defn register-migration! [tag specs]
-  (let [clause (assoc specs :tag tag)]
+  (let [tag (as-keyword tag)
+        clause (assoc specs :tag tag)]
     (swap! migrations
            #(-> %
                 (update-in [:clauses]
@@ -52,7 +61,7 @@
                                           (pr-str tag))
                                (partial remove-and-conj (partial filter-by-tag tag)))
                              conj)
-                           clause)
+                           (normalize-dependency-names clause))
                 (update-in [:index] conj tag)))
     :ok))
 
@@ -73,7 +82,8 @@
                       (jdbc/do-commands
                        \"DROP TABLE test1\")))"
   [tag & specs]
-  `(register-migration! (name '~tag) ~specs))
+  `(register-migration! '~tag
+                        ~(normalize-dependency-names (apply hash-map specs))))
 
 (defn init [migrator]
   (-init migrator))
