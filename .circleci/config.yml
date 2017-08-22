@@ -1,0 +1,118 @@
+version: 2
+jobs:
+  unit_test:
+    parallelism: 2
+    working_directory: ~/nomad
+    docker:
+      - image: openjdk:8
+    environment:
+      - LEIN_ROOT: nbd
+      - SERVICE_NAME: nomad
+      - AWS_PROFILE: staging
+    steps:
+      - checkout
+      - restore_cache:
+          keys:
+            - v3-lein-deps-{{ checksum "project.clj" }}
+      - restore_cache:
+          keys:
+            - v1-awscli
+      - restore_cache:
+          keys:
+            - v1-lein
+      - restore_cache:
+          keys:
+            - v1-semver
+      - run: .circleci/deps.sh
+      - save_cache:
+          key: v1-awscli
+          paths:
+            - /usr/local/aws
+            - /usr/local/bin/aws
+      - save_cache:
+          key: v1-lein
+          paths:
+            - /usr/local/bin/lein
+      - save_cache:
+          key: v1-semver
+          paths:
+            - /usr/bin/semver-from-git
+      - run: AWS_PROFILE=staging lein deps
+      - save_cache:
+          key: v3-lein-deps-{{ checksum "project.clj" }}
+          paths:
+            - /root/.m2
+            - /root/.lein
+      - run: AWS_PROFILE=staging lein test
+  release:
+    parallelism: 1
+    working_directory: ~/nomad
+    docker:
+      - image: openjdk:8
+    environment:
+      - LEIN_ROOT: nbd
+      - VERSION_FILE: ../VERSION
+      - SERVICE_NAME: nomad
+      - GOROOT: ""
+      - GOPATH: "/root/.go"
+      - AWS_PROFILE: staging
+    steps:
+      - checkout
+      - run: echo $PATH
+      - restore_cache:
+          keys:
+            - v2-lein-deps-{{ checksum "project.clj" }}
+      - restore_cache:
+          keys:
+            - v1-awscli
+      - restore_cache:
+          keys:
+            - v1-lein
+      - restore_cache:
+          keys:
+            - v1-github-release
+      - restore_cache:
+          keys:
+            - v1-docker
+      - run: .circleci/deps.sh
+      - save_cache:
+          key: v1-awscli
+          paths:
+            - /usr/local/aws
+            - /usr/local/bin/aws
+      - save_cache:
+          key: v1-lein
+          paths:
+            - /usr/local/bin/lein
+      - run: AWS_PROFILE=staging lein deps
+      - save_cache:
+          key: v2-lein-deps-{{ checksum "project.clj" }}
+          paths:
+            - /root/.m2
+            - /root/.lein
+      - run: ~/omnypay-ci/release-deps.sh
+      - save_cache:
+          key: v1-github-release
+          paths:
+            - /usr/local/bin/github-release
+      - save_cache:
+          key: v1-docker
+          paths:
+            - /usr/bin/docker
+      - run: semver-from-git $VERSION_FILE
+      - save_cache:
+          key: v1-docker
+          paths:
+            - /usr/bin/docker
+      - run: SEMVER=$(cat $VERSION_FILE) ~/omnypay-ci/release-lib.sh
+workflows:
+  version: 2
+  build_test_release:
+    jobs:
+      - unit_test
+      - release:
+          requires:
+            - unit_test
+          filters:
+            branches:
+              only: master
