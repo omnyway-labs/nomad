@@ -52,6 +52,7 @@ jobs:
           paths:
             - /root/.m2
             - /root/.lein
+      - run: semver-from-git $VERSION_FILE
       - run: SEMVER=$(cat $VERSION_FILE) /omnypay-ci/release-lib.sh
 workflows:
   version: 2
