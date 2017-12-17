@@ -120,9 +120,11 @@
          ordered-migration-tags)))
 
 (defn apply-migrations! [migrator]
-  (let [existing-migrations (set (load-applied-migrations migrator))]
+  (let [applied-migrations (set (load-applied-migrations migrator))]
     (doseq [{:as clause :keys [tag up]} (pending-migrations)]
-      (when-not (contains? existing-migrations tag)
+      (when-not (contains? applied-migrations tag)
+        (log/infof "Applying migration %s" tag)
+        (apply! migrator tag up)))))
         (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
 
