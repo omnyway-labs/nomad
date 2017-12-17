@@ -119,20 +119,22 @@
            (first (filter #(= (:tag %) tag) (:clauses @migrations))))
          ordered-migration-tags)))
 
-(defn apply-migrations! [migrator]
-  (let [applied-migrations (set (load-applied-migrations migrator))]
+(defn apply-migrations! [migrator migration-filter]
+  (let [applied-migrations (set (load-applied-migrations migrator))
+        migration-filter (or migration-filter (constantly true))]
     (doseq [{:as clause :keys [tag up]} (pending-migrations)]
-      (when-not (contains? applied-migrations tag)
-        (log/infof "Applying migration %s" tag)
-        (apply! migrator tag up)))))
+      (when (and (migration-filter clause)
+                 (not (contains? applied-migrations tag)))
         (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
 
 (defn migrate!
   "Apply previously defined migration handlers using the specified
   `migrator`."
-  [migrator]
-  (init migrator)
-  (apply-migrations! migrator)
-  (fini migrator)
-  :ok)
+  ([migrator]
+   (migrate! migrator nil))
+  ([migrator migration-filter]
+   (init migrator)
+   (apply-migrations! migrator migration-filter)
+   (fini migrator)
+   :ok))
