@@ -123,7 +123,10 @@
   (let [applied-migrations (set (load-applied-migrations migrator))
         migration-filter (or migration-filter (constantly true))]
     (doseq [{:as clause :keys [tag up]} (pending-migrations)]
-      (when (and (migration-filter clause)
+      (when (and tag
+                 up
+                 clause
+                 (migration-filter clause)
                  (not (contains? applied-migrations tag)))
         (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
