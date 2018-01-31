@@ -117,13 +117,12 @@
   (->> (sort-tags (:clauses @migrations))
        (map
         (fn [tag]
-          (let [migration (->> (:clauses @migrations)
-                               (filter #(= (:tag %) tag))
-                               first)]
-            (when-not migration
-              (log/errorf "Missing tag %s in registered migrations" tag))
-            migration)))
-       (filter some?)))
+          (or (->> (:clauses @migrations)
+                   (filter #(= (:tag %) tag))
+                   first)
+              (as-> (format "Missing tag %s in registered migrations" tag) errmsg
+                (do (log/error errmsg)
+                    (throw (Exception. errmsg)))))))))
 
 (defn apply-migrations! [migrator migration-filter]
   (let [applied-migrations (set (load-applied-migrations migrator))
