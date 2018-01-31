@@ -114,10 +114,15 @@
          (filter #(not= % :none)))))
 
 (defn pending-migrations []
-  (let [ordered-migration-tags (sort-tags (:clauses @migrations))]
-    (map (fn [tag]
-           (first (filter #(= (:tag %) tag) (:clauses @migrations))))
-         ordered-migration-tags)))
+  (->> (sort-tags (:clauses @migrations))
+       (map
+        (fn [tag]
+          (or (->> (:clauses @migrations)
+                   (filter #(= (:tag %) tag))
+                   first)
+              (as-> (format "Missing tag %s in registered migrations" tag) errmsg
+                (do (log/error errmsg)
+                    (throw (ex-info errmsg {:tag tag})))))))))
 
 (defn apply-migrations! [migrator migration-filter]
   (let [applied-migrations (set (load-applied-migrations migrator))
