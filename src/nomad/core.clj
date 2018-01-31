@@ -116,17 +116,16 @@
 (defn pending-migrations []
   (let [ordered-migration-tags (sort-tags (:clauses @migrations))]
     (map (fn [tag]
-           (first (filter #(= (:tag %) tag) (:clauses @migrations))))
+           (or (-> (filter #(= (:tag %) tag) (:clauses @migrations))
+                   first)
+               (log/errorf "Missing tag %s in registered migrations" tag)))
          ordered-migration-tags)))
 
 (defn apply-migrations! [migrator migration-filter]
   (let [applied-migrations (set (load-applied-migrations migrator))
         migration-filter (or migration-filter (constantly true))]
     (doseq [{:as clause :keys [tag up]} (pending-migrations)]
-      (when (and tag
-                 up
-                 clause
-                 (migration-filter clause)
+      (when (and (migration-filter clause)
                  (not (contains? applied-migrations tag)))
         (log/infof "Applying migration %s" tag)
         (apply! migrator tag up)))))
