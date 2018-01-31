@@ -122,7 +122,7 @@
                    first)
               (as-> (format "Missing tag %s in registered migrations" tag) errmsg
                 (do (log/error errmsg)
-                    (throw (Exception. errmsg)))))))))
+                    (throw (ex-info errmsg {:tag tag})))))))))
 
 (defn apply-migrations! [migrator migration-filter]
   (let [applied-migrations (set (load-applied-migrations migrator))
