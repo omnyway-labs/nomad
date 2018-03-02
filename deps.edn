@@ -1,0 +1,11 @@
+{:deps
+ {org.clojure/clojure         {:mvn/version "1.9.0"}
+  com.taoensso/timbre         {:mvn/version "4.3.1"}
+  com.stuartsierra/dependency {:mvn/version "0.2.0"}}
+ :aliases
+ {:test
+  {:extra-paths ["test"]
+   :extra-deps  {com.cognitect/test-runner
+                 {:git/url "git@github.com:cognitect-labs/test-runner"
+                  :sha     "5fb4fc46ad0bf2e0ce45eba5b9117a2e89166479"}}
+   :main-opts   ["-m" "cognitect.test-runner"]}}}
