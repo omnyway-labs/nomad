@@ -1,38 +1,33 @@
 version: 2
 jobs:
   unit-test:
-    parallelism: 2
+    parallelism: 1
     working_directory: ~/nomad
     docker:
-      - image: omnyway/ci-base:${CI_BASE_VERSION}
-        auth:
-          username: $DOCKERHUB_USER
-          password: $DOCKERHUB_PASSWORD
+      - image: circleci/clojure:latest
+      - image: postgres:9.6.2
     environment:
-      - LEIN_ROOT: nbd
       - SERVICE_NAME: nomad
-      - AWS_PROFILE: staging
+      - PGPASSWD: postgres
     steps:
       - checkout
-      - run: /omnypay-ci/set-aws-creds.sh
+      - run: git clone https://${READ_BOT_TOKEN}@github.com/omnypay/omnypay-ci.git  ~/omnypay-ci
+      - run: ~/omnypay-ci/install-basic-deps.sh
       - restore_cache:
           keys:
-            - lein-deps-{{ checksum "project.clj" }}
-      - run: AWS_PROFILE=staging lein deps
+            - deps-{{ checksum "deps.edn" }}
+      - run: sudo apt-get install -yy bc
+      - run: clojure -Atest -i :test
       - save_cache:
-          key: lein-deps-{{ checksum "project.clj" }}
+          key: deps-{{ checksum "deps.edn" }}
           paths:
-            - /root/.m2
-            - /root/.lein
-      - run: AWS_PROFILE=staging lein test
+            - ~/.m2
+            - ~/.gitlibs
   release:
     parallelism: 1
     working_directory: ~/nomad
     docker:
-      - image: omnyway/ci-base:${CI_BASE_VERSION}
-        auth:
-          username: $DOCKERHUB_USER
-          password: $DOCKERHUB_PASSWORD
+      - image: circleci/clojure:latest
     environment:
       - LEIN_ROOT: nbd
       - VERSION_FILE: ../VERSION
@@ -42,18 +37,14 @@ jobs:
       - AWS_PROFILE: staging
     steps:
       - checkout
-      - run: /omnypay-ci/set-aws-creds.sh
+      - run: git clone https://${READ_BOT_TOKEN}@github.com/omnypay/omnypay-ci.git  ~/omnypay-ci
+      - run: ~/omnypay-ci/install-basic-deps.sh
+      - run: ~/omnypay-ci/install-release-deps.sh
       - restore_cache:
           keys:
-            - lein-deps-{{ checksum "project.clj" }}
-      - run: AWS_PROFILE=staging lein deps
-      - save_cache:
-          key: lein-deps-{{ checksum "project.clj" }}
-          paths:
-            - /root/.m2
-            - /root/.lein
+            - deps-{{ checksum "deps.edn" }}
       - run: semver-from-git $VERSION_FILE
-      - run: SEMVER=$(cat $VERSION_FILE) /omnypay-ci/release-lib.sh
+      - run: export SEMVER=$(cat $VERSION_FILE); ~/omnypay-ci/release-lib.sh
 workflows:
   version: 2
   build_test_release:
