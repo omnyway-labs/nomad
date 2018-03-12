@@ -17,7 +17,7 @@ jobs:
           keys:
             - deps-{{ checksum "deps.edn" }}
       - run: sudo apt-get install -yy bc
-      - run: clojure -Atest -i :test
+      - run: clojure -Atest unit
       - save_cache:
           key: deps-{{ checksum "deps.edn" }}
           paths:
