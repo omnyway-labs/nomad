@@ -16,10 +16,7 @@
       :dependencies [other-migration some-other-migration]
       :up   (fn []
               ;; perform db specific schema ops
-              )
-      :down (fn []
-              ;; db schema ops to rollback this migration
-             ))
+              ))
 "}
     nomad.core
   (:require
@@ -77,10 +74,7 @@
       :dependencies [other-migration some-other-migration]
       :up           (fn []
                       (jdbc/do-commands
-                       \"CREATE TABLE test1(name VARCHAR(32))\"))
-      :down         (fn []
-                      (jdbc/do-commands
-                       \"DROP TABLE test1\")))"
+                       \"CREATE TABLE test1(name VARCHAR(32))\")))"
   [tag & specs]
   `(register-migration! '~tag
                         ~(normalize-dependency-names (apply hash-map specs))))

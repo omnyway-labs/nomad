@@ -12,18 +12,12 @@ Define migration handlers as follows:
   (defmigration initial-schema
     :up   (fn []
             (jdbc/do-commands
-             "CREATE TABLE test(name VARCHAR(32))"))
-    :down (fn []
-            (jdbc/do-commands
-             "DROP TABLE test")))
+             "CREATE TABLE test(name VARCHAR(32))")))
 
   (defmigration add-age-column
     :up   (fn []
             (jdbc/do-commands
-             "ALTER TABLE test ADD COLUMN age INTEGER"))
-    :down (fn []
-            (jdbc/do-commands
-             "ALTER TABLE test DROP COLUMN age")))
+             "ALTER TABLE test ADD COLUMN age INTEGER")))
 
 #+END_SRC
 
