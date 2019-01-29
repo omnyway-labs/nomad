@@ -1,7 +1,7 @@
 * Overview
-Nomad is the OmnyPay schema migration library
+Nomad is a SQL schema migration library. It uses pure Clojure functions to implement forward migrations (rollback migrations are a planned feature).
 
-* COMMENT Usage
+* Usage
 
 Define migration handlers as follows:
 
@@ -21,7 +21,9 @@ Define migration handlers as follows:
 
 #+END_SRC
 
-Create a =migrator= using one of the supported nomad migrators (currently H2 and Postgres).
+The name of the migration is used as a unique identifier and is used to track whether the migration has already been applied.
+
+To apply a set of migrations Nomad requires a =migrator= to be provided - see [[https://github.com/omnyway-labs/nomad-migrators/tree/master/src/nomad/migrator][nomad-migrators]] for a list of currently implemented migrators (H2 and Postgres). Migrators provide concrete implementations of the =IMigrator= protocol, which specifies function entry points for loading and saving migration state.
 
 #+BEGIN_SRC clojure
   (require '[nomad.migrator.h2 :as h2])
