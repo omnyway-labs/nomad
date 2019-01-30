@@ -3,6 +3,16 @@ Nomad is a SQL schema migration library. It uses pure Clojure functions to imple
 
 * Usage
 
+
+Add below git coordinates in deps.edn
+
+#+BEGIN_SRC clojure
+omnyway-labs/nomad
+{:git/url "https://github.com/omnyway-labs/nomad.git",
+ :sha "8af037d2cafeb3bf48cca804493ad8d43b74da7e"}
+#+END_SRC
+
+
 Define migration handlers as follows:
 
 #+BEGIN_SRC clojure
